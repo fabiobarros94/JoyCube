@@ -9,7 +9,7 @@
 
 #include "usb_descriptors.h"
 
-// Mapeamento de Pinos - Botões Digitais
+// Pin Mapping - Digital Buttons
 #define BTN_UP      2
 #define BTN_DOWN    3
 #define BTN_LEFT    4
@@ -23,14 +23,14 @@
 #define BTN_L_CLICK 12
 #define BTN_R_CLICK 13
 
-// Mapeamento de Pinos - Multiplexador (CD74HC4067)
+// Pin Mapping - Multiplexer (CD74HC4067)
 #define MUX_S0      14
 #define MUX_S1      15
 #define MUX_S2      16
 #define MUX_S3      17
 #define MUX_SIG     26  // ADC0
 
-// Array de botões para inicialização fácil
+// Button array for easy initialization
 const uint8_t buttons[] = {
     BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT,
     BTN_A, BTN_B, BTN_X, BTN_Y, BTN_Z,
@@ -38,20 +38,20 @@ const uint8_t buttons[] = {
 };
 #define NUM_BUTTONS (sizeof(buttons)/sizeof(buttons[0]))
 
-// Variáveis Globais de Estado do Protocolo WUP-028
+// Global State Variables for WUP-028 Protocol
 static bool wup_polling_enabled = false;
 static uint32_t last_report_time_ms = 0;
 
-// Função para configurar os pinos
+// Function to initialize hardware pins
 void board_hardware_init(void) {
-    // Configura os botões digitais como entrada com pull-up
+    // Configure digital buttons as input with pull-up resistors
     for (int i = 0; i < NUM_BUTTONS; i++) {
         gpio_init(buttons[i]);
         gpio_set_dir(buttons[i], GPIO_IN);
         gpio_pull_up(buttons[i]);
     }
 
-    // Configura os pinos de seleção do multiplexador
+    // Configure multiplexer select pins
     uint8_t mux_pins[] = {MUX_S0, MUX_S1, MUX_S2, MUX_S3};
     for (int i = 0; i < 4; i++) {
         gpio_init(mux_pins[i]);
@@ -59,31 +59,31 @@ void board_hardware_init(void) {
         gpio_put(mux_pins[i], 0);
     }
 
-    // Configura o ADC
+    // Configure the ADC
     adc_init();
     adc_gpio_init(MUX_SIG);
-    adc_select_input(0); // Seleciona ADC0 (GP26)
+    adc_select_input(0); // Select ADC0 (GP26)
 }
 
-// Função para selecionar o canal no multiplexador (0 a 15)
+// Function to select the multiplexer channel (0 to 15)
 void select_mux_channel(uint8_t channel) {
     gpio_put(MUX_S0, (channel & 0x01) ? 1 : 0);
     gpio_put(MUX_S1, (channel & 0x02) ? 1 : 0);
     gpio_put(MUX_S2, (channel & 0x04) ? 1 : 0);
     gpio_put(MUX_S3, (channel & 0x08) ? 1 : 0);
     
-    // Pequeno delay para estabilização do sinal analógico
+    // Small delay to allow the analog signal to settle
     sleep_us(2);
 }
 
-// Lê o ADC e converte a resolução de 12-bits (0-4095) para 8-bits (0-255)
-// O GameCube nativamente usa 8-bits por eixo.
+// Read the ADC and scale the 12-bit resolution (0-4095) down to 8-bits (0-255)
+// The native GameCube protocol strictly uses 8-bits per axis.
 uint8_t read_analog_8bit(void) {
     uint16_t raw_adc = adc_read();
-    return (uint8_t)(raw_adc >> 4); // Divide por 16
+    return (uint8_t)(raw_adc >> 4); // Divide by 16
 }
 
-// Processa dados recebidos do Switch/PC (Comandos do Adaptador)
+// Process data received from Switch/PC (Adapter Commands)
 void process_vendor_commands(void) {
     if (tud_vendor_available()) {
         uint8_t buf[37];
@@ -92,24 +92,24 @@ void process_vendor_commands(void) {
         if (count > 0) {
             uint8_t cmd = buf[0];
             if (cmd == 0x13) {
-                // Comando 0x13: Inicializar polling
+                // Command 0x13: Start polling
                 wup_polling_enabled = true;
             }
             if (cmd == 0x11) {
-                // Comando 0x11: Comando de Rumble
-                // Para 4 controles, os bytes seguintes controlam os motores de vibração.
-                // Como não implementamos rumble no hardware, podemos ignorar em silêncio.
+                // Command 0x11: Rumble command
+                // For 4 controllers, the following bytes control the rumble motors.
+                // Since we don't have rumble hardware, we can silently ignore this.
             }
         }
     }
 }
 
-// Envia o status do GameCube
+// Send the GameCube controller status
 void wup_task(void) {
-    // 1000Hz polling -> Enviar a cada 1ms
+    // 1000Hz polling -> Send every 1ms
     if ( board_millis() - last_report_time_ms < 1) return; 
 
-    // Se o console/host ainda não enviou o comando de início de polling, não enviar status.
+    // If the console/host hasn't sent the start polling command yet, do not send status.
     if (!wup_polling_enabled) return;
 
     if (!tud_vendor_write_available()) return;
@@ -119,21 +119,21 @@ void wup_task(void) {
     wup_028_report_t report;
     memset(&report, 0, sizeof(report));
 
-    report.command = 0x21; // Resposta de status dos controles
+    report.command = 0x21; // Controller status response
 
-    // Inicializando as 4 portas (Portas 2, 3 e 4 ficam desconectadas - 0x00)
+    // Initialize all 4 ports (Ports 2, 3 and 4 remain disconnected - 0x00)
     for (int i = 0; i < 4; i++) {
         report.port[i].status = GC_STATUS_DISCONNECTED;
-        report.port[i].stick_x = 128;   // Posição neutra
+        report.port[i].stick_x = 128;   // Neutral position
         report.port[i].stick_y = 128;
         report.port[i].c_stick_x = 128;
         report.port[i].c_stick_y = 128;
     }
 
-    // Configurando apenas o Controle 1 (Porta 0)
+    // Configure only Controller 1 (Port 0)
     report.port[0].status = GC_STATUS_CONNECTED;
 
-    // Lendo Botões
+    // Read Buttons
     if (!gpio_get(BTN_A))       report.port[0].buttons1 |= (1 << 0);
     if (!gpio_get(BTN_B))       report.port[0].buttons1 |= (1 << 1);
     if (!gpio_get(BTN_X))       report.port[0].buttons1 |= (1 << 2);
@@ -148,7 +148,7 @@ void wup_task(void) {
     if (!gpio_get(BTN_R_CLICK)) report.port[0].buttons2 |= (1 << 2);
     if (!gpio_get(BTN_L_CLICK)) report.port[0].buttons2 |= (1 << 3);
 
-    // Lendo Eixos Analógicos via Multiplexador
+    // Read Analog Axes via Multiplexer
     select_mux_channel(0); report.port[0].stick_x = read_analog_8bit();
     select_mux_channel(1); report.port[0].stick_y = read_analog_8bit();
     select_mux_channel(2); report.port[0].c_stick_x = read_analog_8bit();
@@ -156,9 +156,9 @@ void wup_task(void) {
     select_mux_channel(4); report.port[0].l_analog = read_analog_8bit();
     select_mux_channel(5); report.port[0].r_analog = read_analog_8bit();
 
-    // Enviar o report de 37 bytes pelo endpoint IN (Vendor interface)
+    // Send the 37-byte report via the IN endpoint (Vendor interface)
     tud_vendor_write(&report, sizeof(report));
-    tud_vendor_flush(); // Garante o envio imediato
+    tud_vendor_flush(); // Ensure immediate dispatch
 }
 
 int main(void) {
@@ -169,7 +169,7 @@ int main(void) {
     while (1) {
         tud_task(); // TinyUSB device task
         process_vendor_commands();
-        wup_task(); // Logica principal de leitura e envio
+        wup_task(); // Main polling and reporting logic
     }
 
     return 0;

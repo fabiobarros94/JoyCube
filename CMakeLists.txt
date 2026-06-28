@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 3.13)
 
-# Inicializa o Pico SDK se não estiver inicializado
+# Initialize Pico SDK if not already initialized
 include(pico_sdk_import.cmake OPTIONAL)
 
 project(JoyCube C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-# Inicializa o SDK do Raspberry Pi Pico
+# Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Define o executável
+# Define the executable
 add_executable(joycube
     main.c
     usb_descriptors.c
 )
 
-# Linka as dependências (Pico stdlib, TinyUSB e ADC)
+# Link dependencies (Pico stdlib, TinyUSB, and ADC)
 target_link_libraries(joycube
     pico_stdlib
     hardware_adc
@@ -24,9 +24,9 @@ target_link_libraries(joycube
     tinyusb_board
 )
 
-# Habilita suporte a USB e desabilita UART para stdio (opcional, mas bom para debug via USB)
+# Enable USB support and disable standard UART stdio (useful for USB debugging)
 pico_enable_stdio_usb(joycube 1)
 pico_enable_stdio_uart(joycube 0)
 
-# Cria os arquivos de binário (uf2, hex, bin)
+# Generate binary files (uf2, hex, bin)
 pico_add_extra_outputs(joycube)

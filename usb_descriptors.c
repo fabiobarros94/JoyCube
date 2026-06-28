@@ -37,7 +37,7 @@ enum {
     ITF_NUM_TOTAL
 };
 
-// Endpoints: 1 IN e 1 OUT com wMaxPacketSize de 37 bytes
+// Endpoints: 1 IN and 1 OUT with wMaxPacketSize of 37 bytes
 #define EPNUM_VENDOR_OUT 0x01
 #define EPNUM_VENDOR_IN  0x81
 
@@ -62,7 +62,7 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index) {
 char const* string_desc_arr [] = {
     (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
     "Nintendo",                    // 1: Manufacturer
-    "WUP-028",                     // 2: Product (Identificação do Adaptador GC)
+    "WUP-028",                     // 2: Product (GC Adapter Identification)
     "123456",                      // 3: Serials
 };
 

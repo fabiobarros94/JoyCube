@@ -11,7 +11,7 @@
 #define GC_STATUS_DISCONNECTED 0x00
 #define GC_STATUS_CONNECTED    0x10 // Standard wired controller
 
-// GameCube Controller Report (1 porta = 9 bytes)
+// GameCube Controller Report (1 port = 9 bytes)
 typedef struct __attribute__ ((packed)) {
     uint8_t status;      // 0x10 = connected, 0x00 = disconnected
     uint8_t buttons1;    // Bit 0: A, 1: B, 2: X, 3: Y, 4: D-Left, 5: D-Right, 6: D-Down, 7: D-Up
@@ -26,8 +26,8 @@ typedef struct __attribute__ ((packed)) {
 
 // Full WUP-028 USB Report (37 bytes)
 typedef struct __attribute__ ((packed)) {
-    uint8_t command;             // Sempre 0x21 quando reportando botões
-    wup_port_status_t port[4];   // Status para as 4 portas do adaptador
+    uint8_t command;             // Always 0x21 when reporting buttons
+    wup_port_status_t port[4];   // Status for all 4 adapter ports
 } wup_028_report_t;
 
 #endif /* USB_DESCRIPTORS_H_ */
